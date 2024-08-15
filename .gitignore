@@ -1,0 +1,9 @@
+.env
+
+data/
+modules/
+
+not_required_work_items_hierarchy.txt
+work_items_hierarchy.txt
+
+*.txt
