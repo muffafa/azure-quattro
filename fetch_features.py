@@ -2,13 +2,12 @@ import aiohttp
 import asyncio
 import base64
 import json
-from dotenv import load_dotenv
 import os
+import re
+from bs4 import BeautifulSoup  # For cleaning HTML content
+from dotenv import load_dotenv
 
-
-def configure():
-    load_dotenv()
-
+load_dotenv()
 
 organization = "bordasw"
 project = "Quattro"
@@ -46,6 +45,9 @@ MODE (Recursive)
 # List to store successfully fetched work item IDs
 fetched_ids = []
 
+# Regex pattern to identify URLs
+url_pattern = re.compile(r'http[s]?://\S+')
+
 
 async def fetch_work_item_details(session, item_id):
     item_url = f"https://dev.azure.com/{organization}/{project}/_apis/wit/workitems/{item_id}?api-version=7.1-preview.3"
@@ -53,22 +55,26 @@ async def fetch_work_item_details(session, item_id):
         if item_response.status == 200:
             item_data = await item_response.json()
 
-            # Check if the item_id is already in the list
             if item_id in fetched_ids:
                 print(f"Duplicate ID found: {item_id}. Exiting the program.")
                 raise SystemExit(f"Duplicate ID found: {item_id}. Exiting the program.")
 
-            # Add the item_id to the list of fetched IDs
             fetched_ids.append(item_id)
+
+            # Clean the description using BeautifulSoup
+            description_html = item_data["fields"].get("System.Description", "No Description")
+            soup = BeautifulSoup(description_html, "html.parser")
+            cleaned_description = soup.get_text(separator=" ").strip()
+
+            # Remove external links using regex
+            cleaned_description = re.sub(url_pattern, '', cleaned_description)
 
             print(f"Successfully fetched work item ID: {item_id}")
             return {
                 "id": item_id,
                 "title": item_data["fields"].get("System.Title", "No Title"),
                 "type": item_data["fields"].get("System.WorkItemType", "Unknown"),
-                "description": item_data["fields"].get(
-                    "System.Description", "No Description"
-                ),
+                "description": cleaned_description,
             }
         else:
             print(f"Failed to fetch item details for ID: {item_id}")
@@ -91,7 +97,6 @@ async def fetch_work_items():
 
 
 async def main():
-    configure()
     work_item_details = {}
 
     work_items = await fetch_work_items()
@@ -107,7 +112,6 @@ async def main():
         print("Fetching all work item details...")
         work_item_results = await asyncio.gather(*tasks)
 
-        # Build the details
         for work_item in work_item_results:
             if work_item:
                 work_item_details[work_item["id"]] = work_item
@@ -127,13 +131,13 @@ async def main():
                 work_item_details[parent_id]["children"].append(details)
 
     # Write to a file
-    with open("work_items_hierarchy.txt", "w") as f:
+    with open("work_items_hierarchy.txt", "w", encoding="utf-8") as f:
 
         def write_hierarchy(items, level=0):
             for item in items:
                 if item["type"] in ["Module", "Epic", "Feature"]:
                     if item["type"] == "Module":
-                        f.write("\n")  # Add a newline before module
+                        f.write("\n")
 
                     f.write(
                         f"{' ' * level}{item['id']}: {item['type']}: {item['title']}"
