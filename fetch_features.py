@@ -20,6 +20,7 @@ headers = {
 }
 
 # Define the query here
+# Define the query here
 query = """
 SELECT 
   [System.Id], 
@@ -37,10 +38,32 @@ WHERE
     OR [Source].[System.WorkItemType] = 'Module'
   )
   AND 
+  [Source].[System.Title] IN (
+    'Active Tracking',
+    'Notification',
+    'Flow Management',
+    'Attributes',
+    'AI Assistant',
+    'Transfer',
+    'Active/Passive Asset',
+    'Authentication',
+    'Asset Categorization',
+    'List Asset',
+    'Asset Registration',
+    'Asset Card',
+    'Contract and Plan',
+    'Form Builder',
+    'Breakdown',
+    'Protection Calendar',
+    'Maintenance',
+    'Calibration'
+  )
+  AND 
   [System.Links.LinkType] = 'System.LinkTypes.Hierarchy-Forward'
 ORDER BY [System.AreaPath], [System.IterationPath], [System.WorkItemType], [System.Title]
 MODE (Recursive)
 """
+
 
 # List to store successfully fetched work item IDs
 fetched_ids = []
